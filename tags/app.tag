@@ -1,13 +1,22 @@
 <app>
   <!-- HTML -->
-  <div>
+  <!-- <div>
     <select class="mdb-select md-form" multiple searchable="Search here..">
       <option value="" disabled selected>Select tags</option>
       <option each={ tag, i in tags } value="{i}" selected={ false } >{ tag }</option>
     </select>
+  </div> -->
+  <div>
+    <div class="form-group">
+      <label for="selectTags">Select tags:</label>
+      <select multiple class="form-control" id="selectTags">
+        <option id="tag_select" value="0" >none</option>
+        <option id="tag_select" each={ tag, i in tags } value="{tag}" >{tag}</option>
+      </select>
+    </div>
   </div>
   <div style="display: flex; flex-wrap:wrap">
-    <div class="card" each={ experience, i in experiences} style="width:350px; margin:20px">
+    <div class="card" each={ experience, i in experiences} show= {experience.show} style="width:350px; margin:20px">
       <img src={experience.imageUrl} class="card-img-top" alt="{experience.company}">
       <div class="card-body">
         <div class="card-title">
@@ -32,12 +41,20 @@
     let experienceRef = database.collection('experiences');
     this.experiences = [];
     this.tags = [];
+    this.showTags = [];
     this.tagIndex = 0;
+
+    $(function() {
+      $('#selectTags').change(function() {
+          showTagged($(this).val());
+      });
+    });
 
     experienceRef.onSnapshot(function (snapshot) {
       var experiences = [];
       var tags = that.tags;
       var tagIndex = that.tagIndex;
+      var showTags = that.showTags;
       console.log("tags: " + tags);
       snapshot.forEach(function (doc) {
         var exp = doc.data();
@@ -45,9 +62,15 @@
         var endDate = exp.end_date ? timeConverter(exp.end_date) : "present";
         exp.startDateFormatted = startDate;
         exp.endDateFormatted = endDate;
-        experiences.push(exp);
+        exp.show = false;
+        if(showTags.length == 0){
+          exp.show = true;
+        }
         if(exp.tags){
           exp.tags.forEach(function (tag){
+            if(exp.show = true || showTags.indexOf(tag) < 0 || showTags.length == 0){
+              exp.show = true;
+            }
             if(!tags || tags.toString().indexOf(tag) < 0){
               console.log("adding tag: " + tag);
               tags[tagIndex] = tag;
@@ -56,6 +79,7 @@
             }
           });
         }
+        experiences.push(exp);
       });
       experiences.sort(compare);
       that.experiences = experiences;
@@ -63,6 +87,39 @@
       that.tagIndex = tagIndex;
       that.update();
     });
+
+    function showTagged(showTags){
+      console.log("showTagged");
+      if(showTags.length == 1 && showTags[0] == 0){
+        console.log("NONE");
+        showTags = [];
+      }
+      that.showTags = showTags;
+      var shownExperiences = [];
+      that.experiences.forEach(function(exp){
+        if(showTags.length == 0)
+        {
+          console.log("showTags.length == 0: exp.show = true");
+          exp.show = true;
+        }
+        else
+        {
+          exp.show = false;
+          console.log("exp.show = false");
+          if(exp.tags){
+            exp.tags.forEach(function (tag){
+              if(showTags.indexOf(tag) >= 0){
+                console.log("showTags.indexOf(tag) >= 0: exp.show = true");
+                exp.show = true;
+              }
+            });
+          }
+        }
+        shownExperiences.push(exp);
+      });
+      that.experiences = shownExperiences;
+      that.update();
+    };
 
     function compare(expB, expA) {
       let comparison = 0;
