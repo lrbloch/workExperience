@@ -1,5 +1,11 @@
 <app>
   <!-- HTML -->
+  <div>
+    <select class="mdb-select md-form" multiple searchable="Search here..">
+      <option value="" disabled selected>Select tags</option>
+      <option each={ tag, i in tags } value="{i}" selected={ false } >{ tag }</option>
+    </select>
+  </div>
   <div style="display: flex; flex-wrap:wrap">
     <div class="card" each={ experience, i in experiences} style="width:350px; margin:20px">
       <img src={experience.imageUrl} class="card-img-top" alt="{experience.company}">
@@ -21,14 +27,18 @@
 
   <script>
     // JAVASCRIPT
-    let tag = this;
     let that = this;
     let database = firebase.firestore();
     let experienceRef = database.collection('experiences');
     this.experiences = [];
+    this.tags = [];
+    this.tagIndex = 0;
 
     experienceRef.onSnapshot(function (snapshot) {
       var experiences = [];
+      var tags = that.tags;
+      var tagIndex = that.tagIndex;
+      console.log("tags: " + tags);
       snapshot.forEach(function (doc) {
         var exp = doc.data();
         var startDate = timeConverter(exp.start_date);
@@ -36,9 +46,21 @@
         exp.startDateFormatted = startDate;
         exp.endDateFormatted = endDate;
         experiences.push(exp);
+        if(exp.tags){
+          exp.tags.forEach(function (tag){
+            if(!tags || tags.toString().indexOf(tag) < 0){
+              console.log("adding tag: " + tag);
+              tags[tagIndex] = tag;
+              console.log("tags["+tagIndex+"]: " + tags[tagIndex]);
+              tagIndex++;
+            }
+          });
+        }
       });
       experiences.sort(compare);
       that.experiences = experiences;
+      that.tags = tags;
+      that.tagIndex = tagIndex;
       that.update();
     });
 
@@ -217,13 +239,4 @@
     }
 
   </script>
-
-  <style>
-    /* CSS */
-    :scope {}
-    .special {
-      background-color: #333333;
-      color: #FFFFFF;
-    }
-  </style>
 </app>
